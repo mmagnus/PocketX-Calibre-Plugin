@@ -74,3 +74,5 @@ Run:
     ebook-convert polityka.pl.recipe .mobi --username XXXXXXXXXXX --password XXXXXXXXX --personal-doc true
 
 to get articles from the feed and send it to your Kindle.
+# On Kindle
+![](imgs/kindle.png)
