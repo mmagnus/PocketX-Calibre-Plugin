@@ -1,0 +1,50 @@
+#!/usr/bin/env python2
+# vim:fileencoding=utf-8
+from __future__ import unicode_literals, division, absolute_import, print_function
+from calibre.web.feeds.recipes import BasicNewsRecipe
+import datetime
+
+class polityka(BasicNewsRecipe):
+    title          = 'polityka.pl'
+    oldest_article = 10000
+    max_articles_per_feed = 10000
+    
+    auto_cleanup   = False
+
+    feeds          = [
+        ('polityka.pl', 'http://dl.dropbox.com/s/27t8uhx4nlslggr/feed.xml'),
+    ]
+
+    masthead_url = 'https://dl.dropbox.com/s/iqrap33r3nkxisc/polityka.png?dl=0'
+    cover_url = 'https://dl.dropbox.com/s/gcgud2xhv19raai/polityka_cover.png?dl=0'
+    needs_subscription = True
+
+    no_stylesheets = True
+
+    extra_css = 'body{color:#000} .calibre_navbar { visibility: hidden;}'
+
+    keep_only_tags = []
+    keep_only_tags.append(dict(name='div', attrs={'class': 'cg_article_author_name'}))
+    keep_only_tags.append(dict(name='div', attrs={'class': 'cg_article_date cg_date'}))
+    keep_only_tags.append(dict(name='div', attrs={'class': 'cg_article_readingtime'}))
+    keep_only_tags.append(dict(name='div', attrs={'class': 'cg_article_title'}))
+    keep_only_tags.append(dict(name='div', attrs={'class': 'cg_article_opening_multimedia'}))
+    keep_only_tags.append(dict(name='div', attrs={'class': 'cg_article_lead'}))
+    keep_only_tags.append(dict(name='div', attrs={'class': 'cg_article_meat'}))
+    keep_only_tags.append(dict(name='div', attrs={'class': "cg_article_tags"}))
+    
+    conversion_options = {'tags': u'news, polityka.pl',
+                          'smarten_punctuation': True,
+                          'authors': datetime.datetime.today().strftime('%Y-%m-%d')
+                          }  # opcje konwersji.
+
+    def get_browser(self):
+        br = BasicNewsRecipe.get_browser(self)
+        if self.username is not None and self.password is not None:
+            br.open('https://www.polityka.pl/logowanie')
+            br.select_form(action="https://www.polityka.pl:443/sso/login") # name='form')
+            br['username']   = self.username
+            br['password'] = self.password
+            br.submit()
+        return br
+    
