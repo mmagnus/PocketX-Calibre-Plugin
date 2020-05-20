@@ -8,7 +8,7 @@
 # Workflow
 
 ![](imgs/workflow.png)
-**You callect everything to Pocket. The you run this PocketX script to create a feed.xml, and this feed is processed with recipe polityka to get articles behind paywall. Of course, you can code more than one recipes to process your pocket (depicted as many feeds and many recipes**
+**You collect everything to Pocket. (Let's focus on the orange flow) Then you run this PocketX script to create a feed.xml file and you upload it for example to Dropbox. Next, this feed file is fetched by a recipe,e.g., polityka to get login into the journal and get articles behind a paywall. Of course, you can code more than one recipes to process your pocket (depicted as many feeds and many recipes**
 
 # PocketX
 Configure your feeds in PocketX.recipe:
@@ -20,12 +20,21 @@ Configure your feeds in PocketX.recipe:
                                 'feed_desc': 'polityka.pl',
                                 'feed_link': 'http://polityka.pl',
                                 'feed_search_url' : 'polityka.pl'},
+                     'test':
+                               {'feed_fn': '/Users/magnus/Dropbox/test.xml',
+                                'feed_title': 'polityka.pl',
+                                'feed_desc': 'polityka.pl',
+                                'feed_link': 'http://polityka.pl',
+                                'feed_search_url' : 'polityka.pl'},
+                 }
+
 ```
 
 run:
 
     ebook-convert PocketX.recipe PocketX.mobi
 
+(if you use dropbox for hosting feed files, wait a bit so the feed files will be uploaded to Dropbox)
 
 # Feed
 The feed will be created.
