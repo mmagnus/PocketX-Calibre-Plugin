@@ -467,6 +467,18 @@ class Pocket(BasicNewsRecipe):
     def postprocess_book(self, oeb, opts, log):
         oeb.metadata.add('series', self.series_name)
 
+    def postprocess_html(self, soup, first):
+        title = soup.find('title').text # get title
+        h2s = soup.findAll('h2')  # get all h2 headers
+        for h2 in h2s:
+            if title in h2.text:
+                h2 = h2.clear()  # clean this tag, so the h1 will be there only
+        body = soup.find('body')
+        new_tag = soup.new_tag('h1')
+        new_tag.append(title)
+        body.insert(0, new_tag)
+        # print(soup.prettify(), file=sys.stderr)
+        return soup
 
     def default_cover(self, cover_file):
         """
