@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # vim:ft=python tabstop=8 expandtab shiftwidth=4 softtabstop=4
 from __future__ import print_function
-__version__ = '0.10' # version for pocketx
+__version__ = '0.11' # version for pocketx
 """
+0.11
+- Add ADD_QR
+
 0.10:
 - Add ADD_URL to articles (below the title)
 - Add URLS_TO_TAGS to assign Pocet tags based on urls of articles
@@ -28,6 +31,7 @@ URLS_TO_TAGS = {'investing':
                 ['rnajournal']
                  } # or nothing: {} to switch off
 ADD_URL = True
+ADD_QR = True
 #############################################################################
 
 
@@ -44,7 +48,7 @@ ADD_URL = True
 
 
 
-
+import qrcode
 import os
 if os.environ.has_key("pocketxdev"):
     if os.environ["pocketxdev"] == 'True':
@@ -545,17 +549,18 @@ class Pocket(BasicNewsRecipe):
 
         if ADD_URL:
             url = ''
-            #print(self.articles, file=sys.stderr)
-            for item in self.articles:
+            feed_id = -1
+            art_id = -1
+            for feed_ix, item in enumerate(self.articles):
                 section = item[0]
-                #if type(item) is list:  # this means this is section
-                for art in item[1]: # this is a list of articles from the sectiona
-                        #p('art:', art)
-                        #p('title:', art['title'])
+                for art_ix, art in enumerate(item[1]): # this is a list of articles from the sectiona
                         if art['title'] in str(soup): # in title: # 
-                            #p('url:', art['url'])
                             url = art['url']
                             title = art['title']
+                            break
+                else:
+                    continue
+                break
 
         # search for title (usually as H1 or H2) already in the article to remove it
         # and to insert this title in here as H1
@@ -573,7 +578,14 @@ class Pocket(BasicNewsRecipe):
         body = soup.find('body')
         title_tag = soup.new_tag('h1')
         title_tag.append(title)
-        
+
+        if ADD_QR:
+            img = qrcode.make(url)
+            qr = 'feed_' + str(feed_ix) + '/article_' + str(art_ix) + '/images/qr.png'
+            img.save(qr)
+            qr = soup.new_tag('img', src='images/qr.png', height='250px')
+            body.insert(0, qr)
+
         if ADD_URL:
             url_tag = soup.new_tag('a', href=url)
             url_tag.append(url)
@@ -582,7 +594,6 @@ class Pocket(BasicNewsRecipe):
         # insert 
         body.insert(0, title_tag)
 
-        # print(soup.prettify(), file=sys.stderr)
         return soup
 
     def default_cover(self, cover_file):
