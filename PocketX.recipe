@@ -5,6 +5,7 @@ __version__ = '0.9.2' # version for pocketx
 """
 Dev:
 - Add ADD_URL to articles (below the title)
+- Add URLS_TO_TAGS to assign Pocet tags based on urls of articles
 
 0.9.2 Add SORT_WITHIN_TAG_BY_TITLE
 """
@@ -19,6 +20,13 @@ SORT_METHOD = 'newest'
 TO_PULL = 'unread'
 TITLE_WITH_TAGS = False
 SORT_WITHIN_TAG_BY_TITLE = True
+URLS_TO_TAGS = {'investing':
+                ['fool.com',
+                 'finance',
+                 'marketwatch.com'],
+                 'rna':
+                ['rnajournal']
+                 } # or nothing: {} to switch off
 ADD_URL = True
 #############################################################################
 
@@ -298,6 +306,27 @@ class Pocket(BasicNewsRecipe):
                                            response['list'][item]['time_added']))  # time does not work yet!
                 f.write("""</channel></rss>""")
 
+        ############ AUTO SET TAGS ##############
+        if URLS_TO_TAGS:
+            for item in response['list']:
+                title = response['list'][item]['resolved_title']
+                url = response['list'][item]['resolved_url']
+                item_id = response['list'][item]['item_id']
+
+                tags = []
+                if response['list'][item].has_key('tags'):
+                    tags = response['list'][item]['tags'] # get tags for article
+
+                for tag in URLS_TO_TAGS:
+                    for turl in URLS_TO_TAGS[tag]:
+                        if turl in url:
+                            # comment this if you want to add ALWAYS
+                            # tag if the criterion is met
+                            # if this is uncommented then the tag will be
+                            # added only for untagged articles
+                            # if not tags: # add tags only when no tags assigned
+                                self.add_tag(item_id, tag)                        
+            response = self.get_response() # get the data again to get items with added
         ############ GET TAGS ###################
         # ugly implementation because this is just a copy what happens next
         # to be refactor at some point
@@ -437,6 +466,33 @@ class Pocket(BasicNewsRecipe):
         self.browser = BasicNewsRecipe.get_browser(self)
         self.ensure_authorization()
         return self.browser
+
+    def add_tag(self, item_id, tag):
+        assert self.config.state == PocketConfig.AuthState.Authorized, "Not yet authorized"
+        assert self.config.token, "No access token"
+
+        act_time = int(time())
+        request = mechanize.Request("https://getpocket.com/v3/send",
+                (u'{{'
+                    '"consumer_key":"{0}",'
+                    '"access_token":"{1}",'
+                    '"actions":{2}'
+                '}}').format(
+                    self.consumer_key,
+                    self.config.token,
+                    json.dumps([{
+                        'action': 'tags_add',
+                        'item_id': item_id,
+                        'tags': tag,
+                        'time': act_time,
+                    }])
+                ),
+                headers = {
+                    'Content-Type': 'application/json; charset=UTF8',
+                    'X-Accept': 'application/json'
+                }
+            )
+        response = self.browser.open(request)
 
     def archive(self):
         assert self.config.state == PocketConfig.AuthState.Authorized, "Not yet authorized"
