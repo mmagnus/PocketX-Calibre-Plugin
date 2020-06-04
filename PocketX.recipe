@@ -2,12 +2,12 @@
 # vim:ft=python tabstop=8 expandtab shiftwidth=4 softtabstop=4
 from __future__ import print_function
 __version__ = '0.9.2' # version for pocketx
-
 """
-0.9.2
-Add SORT_WITHIN_TAG_BY_TITLE
-"""
+Dev:
+- Add ADD_URL to articles (below the title)
 
+0.9.2 Add SORT_WITHIN_TAG_BY_TITLE
+"""
 # CONFIGURATION ###########################################################
 TAGS = [] # [] or ['tag1', 'tag2']
 TAGS_EXCEPTIONS = [] # [] or ['tag3', 'tag4']
@@ -19,6 +19,7 @@ SORT_METHOD = 'newest'
 TO_PULL = 'unread'
 TITLE_WITH_TAGS = False
 SORT_WITHIN_TAG_BY_TITLE = True
+ADD_URL = True
 #############################################################################
 
 
@@ -411,6 +412,7 @@ class Pocket(BasicNewsRecipe):
 
         if not articles:
             self.abort_recipe_processing('No articles in the Pocket account %s to download' % (self.config.user)) #, ' '.join(self.tags))) \n[tags: %s]
+        self.articles = articles
         return articles
     
 
@@ -478,14 +480,46 @@ class Pocket(BasicNewsRecipe):
 
     def postprocess_html(self, soup, first):
         title = soup.find('title').text # get title
+
+        if ADD_URL:
+            url = ''
+            #print(self.articles, file=sys.stderr)
+            for item in self.articles:
+                section = item[0]
+                #if type(item) is list:  # this means this is section
+                for art in item[1]: # this is a list of articles from the sectiona
+                        #p('art:', art)
+                        #p('title:', art['title'])
+                        if art['title'] in str(soup): # in title: # 
+                            #p('url:', art['url'])
+                            url = art['url']
+                            title = art['title']
+
+        # search for title (usually as H1 or H2) already in the article to remove it
+        # and to insert this title in here as H1
+        h1s = soup.findAll('h1')  # get all h1 headers
+        for h1 in h1s:
+            if title in h1.text:
+                h1 = h1.clear()  # clean this tag, so the h1 will be there only
+
         h2s = soup.findAll('h2')  # get all h2 headers
         for h2 in h2s:
             if title in h2.text:
                 h2 = h2.clear()  # clean this tag, so the h1 will be there only
+
+        # prepare tags for h1
         body = soup.find('body')
-        new_tag = soup.new_tag('h1')
-        new_tag.append(title)
-        body.insert(0, new_tag)
+        title_tag = soup.new_tag('h1')
+        title_tag.append(title)
+        
+        if ADD_URL:
+            url_tag = soup.new_tag('a', href=url)
+            url_tag.append(url)
+            body.insert(0, url_tag)
+
+        # insert 
+        body.insert(0, title_tag)
+
         # print(soup.prettify(), file=sys.stderr)
         return soup
 
