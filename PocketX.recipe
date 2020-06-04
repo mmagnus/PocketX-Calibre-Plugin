@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 # vim:ft=python tabstop=8 expandtab shiftwidth=4 softtabstop=4
 from __future__ import print_function
-__version__ = '0.9.1' # version for pocketx
+__version__ = '0.9.2' # version for pocketx
+
+"""
+0.9.2
+Add SORT_WITHIN_TAG_BY_TITLE
+"""
 
 # CONFIGURATION ###########################################################
 TAGS = [] # [] or ['tag1', 'tag2']
@@ -13,6 +18,7 @@ OLDEST_ARTICLE = 7
 SORT_METHOD = 'newest'
 TO_PULL = 'unread'
 TITLE_WITH_TAGS = False
+SORT_WITHIN_TAG_BY_TITLE = True
 #############################################################################
 
 
@@ -393,6 +399,9 @@ class Pocket(BasicNewsRecipe):
 
                         pass
                     
+                if SORT_WITHIN_TAG_BY_TITLE:
+                    arts = sorted(arts, key = lambda i: i['title'])
+
                 if not tagItem:
                     tagItem = "Untagged"
 
