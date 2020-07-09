@@ -1,5 +1,5 @@
 # PocketX
-(cross connectivity, ver '0.9')
+(cross connectivity)
 
 This version of the plugin will create RSS feeds based on your Pocketed articles so you can use regular Calibre Recipes to access the content (to customize the way how you fetch artciles or to login into paywalled journals).
 

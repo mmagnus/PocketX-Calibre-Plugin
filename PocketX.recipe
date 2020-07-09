@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # vim:ft=python tabstop=8 expandtab shiftwidth=4 softtabstop=4
 from __future__ import print_function
-__version__ = '0.11.1' # version for pocketx
+__version__ = '1.1.1' # version for pocketx
 """
-0.11
+1.1.1 ;-)
+
+0.11 200604
 - Add ADD_QR
 
-0.10:
+0.10 200604:
 - Add ADD_URL to articles (below the title)
 - Add URLS_TO_TAGS to assign Pocet tags based on urls of articles
 
@@ -16,8 +18,8 @@ __version__ = '0.11.1' # version for pocketx
 TAGS = [] # [] or ['tag1', 'tag2']
 TAGS_EXCEPTIONS = [] # [] or ['tag3', 'tag4']
 INCLUDE_UNTAGGED = True
-ARCHIVE_DOWNLOADED = False
-MAX_ARTICLES_PER_FEED = 4
+ARCHIVE_DOWNLOADED = True
+MAX_ARTICLES_PER_FEED = 10
 OLDEST_ARTICLE = 7
 SORT_METHOD = 'newest'
 TO_PULL = 'unread'
@@ -26,7 +28,8 @@ SORT_WITHIN_TAG_BY_TITLE = True
 URLS_TO_TAGS = {'investing':
                 ['fool.com',
                  'finance',
-                 'marketwatch.com'],
+                 'marketwatch.com',
+                 'benzinga'],
                  'rna':
                 ['rnajournal']
                  } # or nothing: {} to switch off
@@ -37,10 +40,13 @@ ADD_QR = True
 import sys
 """
 install pip qrcode and add a path here for "Calibre's Python"
-if you don't know what the path is, just run your python and then
+if you don't know what the path is for installed qrcode, just run your Python and then
 
 >>> import qrcode
 >>> help(qrcode)
+FILE
+    /usr/local/lib/python2.7/site-packages/qrcode/__init__.py
+# use /usr/local/lib/python2.7/site-packages/ (or similar in your case) for the path
 """
 sys.path.append("/usr/local/lib/python2.7/site-packages") 
 import qrcode
@@ -48,8 +54,8 @@ import qrcode
 import os
 if os.environ.has_key("pocketxdev"):
     if os.environ["pocketxdev"] == 'True':
-        ARCHIVE_DOWNLOADED = False
-        VERBOSE = True
+        ARCHIVE_DOWNLOADED = False  # overwrite the variable
+        VERBOSE = False
         print('============= POCKETX DEBUG =============')
 
 from calibre.constants import config_dir
@@ -72,7 +78,6 @@ except ImportError:
 
 __license__ = 'GPL v3'
 __copyright__ = '2019, David Orchard'
-
 
 
 class PocketConfig:
@@ -541,7 +546,15 @@ class Pocket(BasicNewsRecipe):
         oeb.metadata.add('series', self.series_name)
 
     def postprocess_html(self, soup, first):
+        """
+        (u'Untagged', [{u'url': u'http://ump.fuw.edu.pl/wiki/Wersje#Kt.C3.B3ra_wersja_UMP_.28dla_Garmina.29_b.C4.99dzie_mi_pasowa.C4.87.3F', u'date': u'1591629286', u'description': u'', u'title': u''}, {u'url': u'https://scholar.google.com/citations?hl=en&user=yRb0DnQAAAAJ&view_op=list_works&sortby=pubdate', u'date': u'1591364848', u'description': u'', u'title': u''},
+        """        
         title = soup.find('title').text # get title
+
+        if VERBOSE:
+            print('title:', title, file=sys.stderr)
+            self.log.exception('title:' + title)
+            self.log.exception(self.articles)
 
         if ADD_URL:
             url = ''
