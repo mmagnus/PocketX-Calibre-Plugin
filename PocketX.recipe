@@ -25,6 +25,7 @@ SORT_METHOD = 'newest'
 TO_PULL = 'unread'
 TITLE_WITH_TAGS = False
 SORT_WITHIN_TAG_BY_TITLE = True
+IGNORE_URLS = ['twitter.com']
 URLS_TO_TAGS = {'investing':
                 ['fool.com',
                  'finance',
@@ -337,6 +338,22 @@ class Pocket(BasicNewsRecipe):
                             # added only for untagged articles
                             # if not tags: # add tags only when no tags assigned
                                 self.add_tag(item_id, tag)                        
+
+        ########################################################################
+        # ignore given url and put them into archive
+        if IGNORE_URLS:
+            for item in response['list']:
+                title = response['list'][item]['resolved_title']
+                url = response['list'][item]['resolved_url']
+                item_id = response['list'][item]['item_id']
+
+                for ignore_url in IGNORE_URLS:
+                    if ignore_url in url:
+                        self.to_archive.append(item_id)
+
+            self.archive()
+            self.to_archive = []
+
             response = self.get_response() # get the data again to get items with added
         ############ GET TAGS ###################
         # ugly implementation because this is just a copy what happens next
