@@ -1,0 +1,544 @@
+#!/usr/bin/env python
+# vim:ft=python tabstop=8 expandtab shiftwidth=4 softtabstop=4
+
+__version__ = '0.9.2' # version for pocketx
+"""
+Dev:
+- Add ADD_URL to articles (below the title)
+
+0.9.2 Add SORT_WITHIN_TAG_BY_TITLE
+"""
+# CONFIGURATION ###########################################################
+TAGS = [] # [] or ['tag1', 'tag2']
+TAGS_EXCEPTIONS = [] # [] or ['tag3', 'tag4']
+INCLUDE_UNTAGGED = True
+ARCHIVE_DOWNLOADED = False
+MAX_ARTICLES_PER_FEED = 4
+OLDEST_ARTICLE = 7
+SORT_METHOD = 'newest'
+TO_PULL = 'unread'
+TITLE_WITH_TAGS = False
+SORT_WITHIN_TAG_BY_TITLE = True
+ADD_URL = True
+#############################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from calibre.constants import config_dir
+from calibre.utils.config import JSONConfig
+from calibre.web.feeds.news import BasicNewsRecipe
+from collections import namedtuple
+from os import path
+from time import localtime, strftime, time
+import sys
+
+import errno
+import json
+import mechanize
+import operator
+
+try:
+    from urllib.error import HTTPError
+except ImportError:
+    from urllib.error import HTTPError
+
+__license__ = 'GPL v3'
+__copyright__ = '2019, David Orchard'
+
+
+
+class PocketConfig:
+    __file_path = path.join(config_dir, 'custom_recipes', 'Pocket.json')
+
+    class AuthState:
+        FirstRun = 1
+        Authorizing = 2
+        Authorized = 3
+
+    def __init__(self, state = AuthState.FirstRun, token = None, user = None):
+        # Default values
+        self.state = state
+        self.token = token
+        self.user = user
+
+    @staticmethod
+    def from_file():
+        config = PocketConfig()
+        config.load()
+        return config
+
+    def load(self):
+        try:
+            with open(self.__file_path) as config:
+                config = json.load(config)
+
+            if isinstance(config, dict):
+                for key in list(self.__dict__.keys()):
+                    if config[key]:
+                        setattr(self, key, config[key])
+        except IOError as e:
+            # File not found
+            if e.errno != errno.ENOENT:
+               raise e
+
+    def save(self):
+        with open(self.__file_path, 'w') as config:
+            json.dump(self.__dict__, config)
+
+
+class Pocket(BasicNewsRecipe):
+    config = PocketConfig.from_file()
+
+    __author__ = 'David Orchard'
+    description = '''
+
+        Modified by Marcin Magnus.
+
+        Fetches articles saved with <a href="https://getpocket.com/">Pocket</a> and archives them.<br>
+    ''' + ('''
+        Click <a href="https://getpocket.com/connected_applications">here</a>
+        to disconnect Calibre from the Pocket account "{}".
+    '''.format(config.user) if config.user else '''
+        Run 'Fetch News' with this source scheduled to initiate authentication with Pocket.
+    ''')
+    publisher = 'Pocket.com'
+    category = 'info, custom, Pocket'
+
+    # User-configurable settings -----------------------------------------------
+    tagsList = TAGS 
+    oldest_article = OLDEST_ARTICLE
+    max_articles_per_feed = MAX_ARTICLES_PER_FEED
+    archive_downloaded = ARCHIVE_DOWNLOADED
+    include_untagged = INCLUDE_UNTAGGED    
+    series_name = 'Pocket'
+    sort_method = SORT_METHOD
+    to_pull = TO_PULL
+
+    publication_type = 'magazine'
+    title = "Pocket"
+    # timefmt = '' # uncomment to remove date from the filenames, if commented then you will get something like `Pocket [Wed, 13 May 2020]`
+    masthead_url = "https://github.com/mmagnus/Pocket-Plus-Calibre-Plugin/raw/master/doc/masthead.png"
+    # will make square cover; this will replace text and cover of the default
+    # cover_url = "https://github.com/mmagnus/Pocket-Plus-Calibre-Plugin/raw/master/doc/cover.png"
+    # --------------------------------------------------------------------------
+    
+    # Inherited developer settings
+    auto_cleanup = True
+    no_stylesheets = True
+    use_embedded_content = False
+    ignore_duplicate_articles = {'url'}
+    #keep_tags = '<title>'
+    
+    # Custom developer settings
+    consumer_key = '87006-2ecad30a91903f54baf0ee05'
+    redirect_uri = 'https://calibre-ebook.com/'
+    base_url = 'https://app.getpocket.com'
+    to_archive = []
+
+    simultaneous_downloads = 10
+    keep_tags = '<title>'
+    extra_css = '.touchscreen_navbar {display: none;}'
+    extra_css = '.calibre_navbar { visibility: hidden; }'
+
+    # TITLE_WITH_TAGS
+    tags_title = ' '
+    if tagsList:
+        if tagsList[-1] != '' and TITLE_WITH_TAGS:  # ugly hack
+            tags_title = ':' + ' '.join(tagsList).upper() + ' '
+
+
+    def first_run(self):
+        request = mechanize.Request("https://getpocket.com/v3/oauth/request",
+                ('{{'
+                    '"consumer_key":"{0}",'
+                    '"redirect_uri":"{1}"'
+                '}}').format(
+                    self.consumer_key,
+                    self.redirect_uri
+                ),
+                headers = {
+                    'Content-Type': 'application/json; charset=UTF8',
+                    'X-Accept': 'application/json'
+                }
+            )
+        response = self.browser.open(request)
+        response = json.load(response)
+        self.config = PocketConfig(
+                state = PocketConfig.AuthState.Authorizing,
+                token = response['code']
+        )
+
+    def authorize(self):
+        assert self.config.state == PocketConfig.AuthState.Authorizing, "Authorization process not yet begun"
+        assert self.config.token, "No request token"
+        request = mechanize.Request("https://getpocket.com/v3/oauth/authorize",
+                ('{{'
+                    '"consumer_key":"{0}",'
+                    '"code":"{1}"'
+                '}}').format(
+                    self.consumer_key,
+                    self.config.token
+                ),
+                headers = {
+                    'Content-Type': 'application/json; charset=UTF8',
+                    'X-Accept': 'application/json'
+                }
+            )
+        try:
+            response = self.browser.open(request)
+            response = json.load(response)
+            self.config = PocketConfig(
+                    state = PocketConfig.AuthState.Authorized,
+                    token = response["access_token"],
+                    user = response["username"],
+            )
+        except HTTPError as e:
+            if e.code == 403:
+                # The code has already been used, or the user denied access
+                self.reauthorize()
+            raise e
+
+    def get_response(self):
+        request = mechanize.Request("https://getpocket.com/v3/get",
+                ('{{'
+                    '"consumer_key":"{0}",'
+                    '"access_token":"{1}",'
+                    '"count":"{2}",'
+                    '"since":"{3}",'
+                    '"state":"{5}",'
+                    '"detailType":"complete",'
+                    '"sort":"{4}"' '}}').format(
+                    self.consumer_key,
+                    self.config.token,
+                    self.max_articles_per_feed * 1000,  # something "unlimited"
+                    int(time()) - 86400 * self.oldest_article,
+                    self.sort_method, 
+                    self.to_pull,
+                ),
+                headers = {
+                    'Content-Type': 'application/json; charset=UTF8',
+                    'X-Accept': 'application/json'
+                }
+            )
+
+        try:
+            response = self.browser.open(request)
+            response = json.load(response)
+        except HTTPError as e:
+            if e.code == 401:
+                # Calibre access has been removed
+                self.reauthorize()
+                raise e
+        if not response['list']:
+            self.abort_recipe_processing('No unread articles in the Pocket account "{}"'.format(self.config.user))
+        return response
+
+    def parse_index(self):
+        assert self.config.state == PocketConfig.AuthState.Authorized, "Not yet authorized"
+        assert self.config.token, "No access token"
+
+        response = self.get_response()
+
+        articles = []
+        articles_to_ignore = [] # articles that should be ignored because they are tagged with a tag in TAGS_EXCEPTIONS
+
+        ##### YOUR FEED #################################
+        make_feed = True  # option
+        if make_feed:
+            feeds = {'polityka':
+                               {'feed_fn': '/Users/magnus/Dropbox/feed.xml',
+                                'feed_title': 'polityka.pl',
+                                'feed_desc': 'polityka.pl',
+                                'feed_link': 'http://polityka.pl',
+                                'feed_search_url' : 'polityka.pl'},
+                 'test':
+                               {'feed_fn': '/Users/magnus/Dropbox/test.xml',
+                                'feed_title': 'polityka.pl',
+                                'feed_desc': 'polityka.pl',
+                                'feed_link': 'http://polityka.pl',
+                                'feed_search_url' : 'polityka.pl'},
+                 }
+
+            for feed in list(feeds.keys()):
+                x = feeds[feed]
+                f = open(x['feed_fn'], 'w')
+                f.write("""<?xml version="1.0" encoding="UTF-8" ?><rss version="2.0"><channel>
+                        <title>%s</title>
+                        <description>%s</description>
+                        <link>%s</link>
+                        """ % (x['feed_title'], x['feed_desc'], x['feed_link']))
+
+                for item in response['list']:
+                    title = response['list'][item]['resolved_title']
+                    url = response['list'][item]['resolved_url']
+                    if x['feed_search_url'] in url:
+                        f.write("""
+                             <item>          
+                              <title>%s</title>
+                              <description>%s</description>
+                              <link>%s</link>
+                              <pubDate>%s</pubDate>
+                             </item>""" % (title,
+                                           response['list'][item]['excerpt'],
+                                           response['list'][item]['resolved_url'],
+                                           response['list'][item]['time_added']))  # time does not work yet!
+                f.write("""</channel></rss>""")
+
+        ############ GET TAGS ###################
+        # ugly implementation because this is just a copy what happens next
+        # to be refactor at some point
+        if self.tagsList:
+            pass  # so if you have any tags, skip this
+        else:
+            self.tagsList = []
+            for item in response['list']:
+                title = response['list'][item]['resolved_title']
+                url = response['list'][item]['resolved_url']
+                try:
+                    tagItem = list(response['list'][item]['tags'].keys())[0]
+                except KeyError:
+                    continue
+                if tagItem not in self.tagsList:
+                    self.tagsList.append(tagItem)            
+            f.write("""</channel></rss>""")
+
+            sorted(self.tagsList, key=str.lower)
+
+        if self.include_untagged:
+            self.tagsList.append('') # ugly hack
+
+        ############ PROCESS ARTICLES ###########
+        for tagItem in self.tagsList:
+            request = mechanize.Request("https://getpocket.com/v3/get",
+                    ('{{'
+                        '"consumer_key":"{0}",'
+                        '"access_token":"{1}",'
+                        '"count":"{2}",'
+                        '"since":"{3}",'
+                        '"state":"{6}",'
+                        '"detailType":"complete",'
+                        '"sort":"{4}",'
+                        '"tag":"{5}"'
+                       '}}').format(
+                        self.consumer_key,
+                        self.config.token,
+                        self.max_articles_per_feed,
+                        int(time()) - 86400 * self.oldest_article,
+                        self.sort_method, 
+                        tagItem,
+                        self.to_pull,
+                    ),
+                    headers = {
+                        'Content-Type': 'application/json; charset=UTF8',
+                        'X-Accept': 'application/json'
+                    }
+                )
+
+            try:
+                response = self.browser.open(request)
+                response = json.load(response)
+            except HTTPError as e:
+                if e.code == 401:
+                    # Calibre access has been removed
+                    self.reauthorize()
+                    raise e
+
+            if not response['list']:
+                # self.abort_recipe_processing('No unread articles in the Pocket account "{}"'.format(self.config.user))
+                continue
+
+            if self.archive_downloaded and response['list']:
+                #Only archive items NOT in excluded tags.
+                if tagItem not in TAGS_EXCEPTIONS:
+                    for item in list(response['list'].values()):
+                        # Avoid duplicates as an article can appear in a tag and in the 'Untagged' section
+                        if (item['item_id'] not in articles_to_ignore and item['item_id'] not in self.to_archive):
+                            # if polityka.pl don't archive
+                            # if 'polityka.pl' in item['given_url']:
+                            #    continue
+                            ############
+                            self.to_archive.append(item['item_id'])
+
+            if not response['list']:
+                pass
+            else:
+                arts = []
+                for item in list(response['list'].values()): # .values() sorted(response['list'].values(), key = lambda x: x['sort_id'])
+
+                    # If the tag is excluded, store the item_id so we can test against the list
+                    # when processing the empty tag, which includes all the articles
+                    if tagItem in TAGS_EXCEPTIONS:
+                        articles_to_ignore.append(item['item_id'])
+
+
+                    try: # KeyError: u'resolved_title' error fix?
+                        if item['item_id'] not in articles_to_ignore:
+                            arts.append({
+                            'title': item['resolved_title'],
+                            'url': item['resolved_url'],
+                            'date': item['time_added'],
+                            'description': item['excerpt'],
+                            }) # 'dupa' +
+
+                    except KeyError:
+
+                        print(response['list'], file=sys.stderr)
+
+                        pass
+                    
+                if SORT_WITHIN_TAG_BY_TITLE:
+                    arts = sorted(arts, key = lambda i: i['title'])
+
+                if not tagItem:
+                    tagItem = "Untagged"
+
+                if arts: # if no arts, then don't create an empty entry with the tag only!
+                    if tagItem not in TAGS_EXCEPTIONS: #Only include tags NOT excluded
+                        articles.append((tagItem, arts))
+
+        if not articles:
+            self.abort_recipe_processing('No articles in the Pocket account %s to download' % (self.config.user)) #, ' '.join(self.tags))) \n[tags: %s]
+        self.articles = articles
+        return articles
+    
+
+    def reauthorize(self):
+        self.config = PocketConfig();
+        self.ensure_authorization()
+
+    def ensure_authorization(self):
+        if self.config.state is PocketConfig.AuthState.FirstRun:
+            self.first_run()
+            self.config.save()
+            self.abort_recipe_processing('''
+                Calibre must be granted access to your Pocket account. Please click
+                <a href="https://getpocket.com/auth/authorize?request_token={0}&redirect_uri={1}">here</a>
+                to authenticate via a browser, and then re-fetch the news.
+            '''.format(self.config.token, self.redirect_uri))
+        elif self.config.state is PocketConfig.AuthState.Authorizing:
+            self.authorize()
+            self.config.save()
+
+    def get_browser(self, *args, **kwargs):
+        self.browser = BasicNewsRecipe.get_browser(self)
+        self.ensure_authorization()
+        return self.browser
+
+    def archive(self):
+        assert self.config.state == PocketConfig.AuthState.Authorized, "Not yet authorized"
+        assert self.config.token, "No access token"
+
+        if not self.to_archive:
+            return
+
+        archived_time = int(time())
+        request = mechanize.Request("https://getpocket.com/v3/send",
+                ('{{'
+                    '"consumer_key":"{0}",'
+                    '"access_token":"{1}",'
+                    '"actions":{2}'
+                '}}').format(
+                    self.consumer_key,
+                    self.config.token,
+                    json.dumps([{
+                        'action': 'archive',
+                        'item_id': item_id,
+                        'time': archived_time,
+                    } for item_id in self.to_archive])
+                ),
+                headers = {
+                    'Content-Type': 'application/json; charset=UTF8',
+                    'X-Accept': 'application/json'
+                }
+            )
+        response = self.browser.open(request)
+
+    def cleanup(self):
+        # If we're in another state, then downloading didn't complete
+        # (e.g. reauthorization needed) so there is no archiving to do
+        if self.config.state == PocketConfig.AuthState.Authorized:
+            self.archive()
+
+    # TODO: This works with EPUB, but not mobi/azw3
+    # BUG: https://bugs.launchpad.net/calibre/+bug/1838486
+    def postprocess_book(self, oeb, opts, log):
+        oeb.metadata.add('series', self.series_name)
+
+    def postprocess_html(self, soup, first):
+        title = soup.find('title').text # get title
+
+        if ADD_URL:
+            url = ''
+            #print(self.articles, file=sys.stderr)
+            for item in self.articles:
+                section = item[0]
+                #if type(item) is list:  # this means this is section
+                for art in item[1]: # this is a list of articles from the sectiona
+                        #p('art:', art)
+                        #p('title:', art['title'])
+                        if art['title'] in str(soup): # in title: # 
+                            #p('url:', art['url'])
+                            url = art['url']
+                            title = art['title']
+
+        # search for title (usually as H1 or H2) already in the article to remove it
+        # and to insert this title in here as H1
+        h1s = soup.findAll('h1')  # get all h1 headers
+        for h1 in h1s:
+            if title in h1.text:
+                h1 = h1.clear()  # clean this tag, so the h1 will be there only
+
+        h2s = soup.findAll('h2')  # get all h2 headers
+        for h2 in h2s:
+            if title in h2.text:
+                h2 = h2.clear()  # clean this tag, so the h1 will be there only
+
+        # prepare tags for h1
+        body = soup.find('body')
+        title_tag = soup.new_tag('h1')
+        title_tag.append(title)
+        
+        if ADD_URL:
+            url_tag = soup.new_tag('a', href=url)
+            url_tag.append(url)
+            body.insert(0, url_tag)
+
+        # insert 
+        body.insert(0, title_tag)
+
+        # print(soup.prettify(), file=sys.stderr)
+        return soup
+
+    def default_cover(self, cover_file):
+        """
+        Create a generic cover for recipes that don't have a cover
+        This override adds time to the cover
+        """
+        try:
+            from calibre.ebooks import calibre_cover
+            title = self.title if isinstance(self.title, str) else \
+                self.title.decode('utf-8', 'replace')
+            # print('>> title', title, file=sys.stderr)
+            date = strftime(self.timefmt)
+            time = strftime('%a %d %b %Y %-H:%M')
+            img_data = calibre_cover(title, date, time)
+            cover_file.write(img_data)
+            cover_file.flush()
+        except:
+            self.log.exception('Failed to generate default cover')
+            return False
+        return True
