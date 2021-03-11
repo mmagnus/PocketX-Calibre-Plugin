@@ -9,10 +9,10 @@ Dev:
 0.9.2 Add SORT_WITHIN_TAG_BY_TITLE
 """
 # CONFIGURATION ###########################################################
+ARCHIVE_DOWNLOADED = True
 TAGS = [] # [] or ['tag1', 'tag2']
 TAGS_EXCEPTIONS = [] # [] or ['tag3', 'tag4']
 INCLUDE_UNTAGGED = True
-ARCHIVE_DOWNLOADED = False
 MAX_ARTICLES_PER_FEED = 4
 OLDEST_ARTICLE = 7
 SORT_METHOD = 'newest'
@@ -20,13 +20,27 @@ TO_PULL = 'unread'
 TITLE_WITH_TAGS = False
 SORT_WITHIN_TAG_BY_TITLE = True
 ADD_URL = True
+# case insensitive
 URLS_TO_TAGS = {'investing':
                 ['fool.com',
                  'finance',
                  'marketwatch.com',
                  'benzinga'],
+
                  'rna':
-                ['rnajournal']
+                ['rnajournal'],
+
+                'office':
+                ['The Office'],
+
+                'boox':
+                ['boox'],
+
+                'covid':
+                ['opzz'],
+
+                'pen & paper':
+                ['pioro']
                  } # or nothing: {} to switch off
 #############################################################################
 
@@ -313,13 +327,15 @@ class Pocket(BasicNewsRecipe):
                 url = response['list'][item]['resolved_url']
                 item_id = response['list'][item]['item_id']
 
+                print('>> url', url, file=sys.stderr)
+
                 tags = []
                 if 'tags' in response['list'][item]:
                     tags = response['list'][item]['tags'] # get tags for article
 
                 for tag in URLS_TO_TAGS:
                     for turl in URLS_TO_TAGS[tag]:
-                        if turl in url:
+                        if turl.lower() in url.lower():
                             # comment this if you want to add ALWAYS
                             # tag if the criterion is met
                             # if this is uncommented then the tag will be
@@ -551,6 +567,33 @@ class Pocket(BasicNewsRecipe):
 
         # print(soup.prettify(), file=sys.stderr)
         return soup
+
+    def add_tag(self, item_id, tag):
+        assert self.config.state == PocketConfig.AuthState.Authorized, "Not yet authorized"
+        assert self.config.token, "No access token"
+
+        act_time = int(time())
+        request = mechanize.Request("https://getpocket.com/v3/send",
+                ('{{'
+                    '"consumer_key":"{0}",'
+                    '"access_token":"{1}",'
+                    '"actions":{2}'
+                '}}').format(
+                    self.consumer_key,
+                    self.config.token,
+                    json.dumps([{
+                        'action': 'tags_add',
+                        'item_id': item_id,
+                        'tags': tag,
+                        'time': act_time,
+                    }])
+                ),
+                headers = {
+                    'Content-Type': 'application/json; charset=UTF8',
+                    'X-Accept': 'application/json'
+                }
+            )
+        response = self.browser.open(request)
 
     def default_cover(self, cover_file):
         """
