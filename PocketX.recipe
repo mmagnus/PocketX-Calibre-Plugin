@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-# vim:ft=python tabstop=8 expandtab shiftwidth=4 softtabstop=4
-__version__ = '1.2' # version for pocketx
+__version__ = '1.2'
 """
 210321 1.2
 - Second attempt: redesign: Add ADD_URL to articles (below the title)
