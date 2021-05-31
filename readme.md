@@ -3,14 +3,14 @@
 <h1>
 PocketX recipe for Calibre
 </h1>
-</div>
-
 [PocketX-Calibre-Plugin](https://github.com/mmagnus/Pocket-Plus-Calibre-Plugin) is an experimental version of [Pocket-Plus-Calibre-Plugin](https://github.com/mmagnus/Pocket-Plus-Calibre-Plugin)
+</div>
 
 Features tested here:
 
 - add QR and URL to articles for quick access 
 - test workflow, PocketX, dealing with articles behind paywalls vis temporary RSS feeds
+
 
 Table of Contents
 =================
