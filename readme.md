@@ -9,7 +9,7 @@ PocketX recipe for Calibre
 Features tested here:
 
 - add QR and URL to articles for quick access a given content (articles with videos) on your phone or tablet,
-- test workflow, PocketX, dealing with articles behind paywalls vis temporary RSS feeds
+- test workflow, PocketX, dealing with articles behind paywalls via creating temporary RSS feeds (this workflow works, but it's not easy to setup)
 
 Table of Contents
 =================
