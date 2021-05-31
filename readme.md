@@ -3,7 +3,7 @@
 <h1>
 PocketX recipe for Calibre
 </h1>
-[PocketX-Calibre-Plugin](https://github.com/mmagnus/Pocket-Plus-Calibre-Plugin) is an experimental version of [Pocket-Plus-Calibre-Plugin](https://github.com/mmagnus/Pocket-Plus-Calibre-Plugin)
+	<a href="https://github.com/mmagnus/Pocket-Plus-Calibre-Plugin">PocketX-Calibre-Plugin</a> is an experimental version of <a href="https://github.com/mmagnus/Pocket-Plus-Calibre-Plugin">Pocket-Plus-Calibre-Plugin</a>
 </div>
 
 Features tested here:
