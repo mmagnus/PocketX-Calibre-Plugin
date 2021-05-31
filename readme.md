@@ -1,3 +1,36 @@
+<div align="center">
+	<img src="imgs/banner.png" width="400px">
+<h1>
+PocketX recipe for Calibre
+</h1>
+</div>
+
+[PocketX-Calibre-Plugin](https://github.com/mmagnus/Pocket-Plus-Calibre-Plugin) is an experimental version of [Pocket-Plus-Calibre-Plugin](https://github.com/mmagnus/Pocket-Plus-Calibre-Plugin)
+
+Features tested here:
+
+- add QR and URL to articles for quick access 
+- test workflow, PocketX, dealing with articles behind paywalls vis temporary RSS feeds
+
+Table of Contents
+=================
+
+* [QR &amp; URL](#qr--url)
+* [PocketX](#pocketx)
+  * [Motivation](#motivation)
+  * [Workflow](#workflow)
+  * [Feed](#feed)
+  * [Recipes](#recipes)
+  * [On Kindle](#on-kindle)
+* [Configuration](#configuration)
+
+Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc.go)
+
+# QR & URL
+One of the feature that is explored here is to the usage of QR codes to get access to a given content on your tablet or iPhone, directly going from your Kindle/Boox.
+
+![](imgs/qr.png)
+
 # PocketX
 (cross connectivity)
 
@@ -5,16 +38,17 @@ This version of the plugin will create RSS feeds based on your Pocketed articles
 
 **This experimental version of the main plugin, still with errors, so use only for testing.**
 
-# Motivation
+## Motivation
 
 > I want to keep all my links in one place, Pocket. Howerver, I keep there some journals behind paywall, so I need a way to fetch these artciles. Sometimes PocketX is not able to process the articles correctly, so you might want to create feeds and recipes for various use cases.
 
-# Workflow
+## Workflow
 
 ![](imgs/workflow.png)
 **You collect everything to Pocket. (Let's focus on the orange flow) Then you run this PocketX script to create a feed.xml file and you upload it for example to Dropbox. Next, this feed file is fetched by a recipe,e.g., polityka to get login into the journal and get articles behind a paywall. Of course, you can code more than one recipes to process your pocket (depicted as many feeds and many recipes**
 
-# PocketX
+##
+ PocketX
 Configure your feeds in PocketX.recipe:
 
 ```python
@@ -40,7 +74,7 @@ run:
 
 (if you use dropbox for hosting feed files, wait a bit so the feed files will be uploaded to Dropbox)
 
-# Feed
+## Feed
 The feed will be created.
 
 
@@ -64,7 +98,7 @@ The feed will be created.
 This is a real feed ;-) you can use Feedly to access it.
 
 
-# Recipes
+## Recipes
 Example: polityka.recipe with login in into the journal!
 
 Configure the feed:
@@ -91,7 +125,7 @@ or run via Calibre:
 ![](imgs/recipe.png)
 
 to get articles from the feed and send it to your Kindle.
-# On Kindle
+## On Kindle
 ![](imgs/kindle.png)
 
 # Configuration
