@@ -1,1 +1,4 @@
 bucket
+debug/
+secret.sh
+*mobi
