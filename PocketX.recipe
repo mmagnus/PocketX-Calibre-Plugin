@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 __version__ = '1.2'
 """
+SORT_WITHIN_TAG_BY_DOMAIN
+
 210321 1.2
 - Second attempt: redesign: Add ADD_URL to articles (below the title)
 - Add description to the articles
@@ -28,6 +30,7 @@ SORT_METHOD = 'newest'
 TO_PULL = 'unread'
 TITLE_WITH_TAGS = False
 SORT_WITHIN_TAG_BY_TITLE = True
+SORT_WITHIN_TAG_BY_DOMAIN = False
 URLS_TO_TAGS = {}
 ADD_URL = True
 ADD_QR = True
@@ -437,11 +440,15 @@ class Pocket(BasicNewsRecipe):
 
                     try: # KeyError: u'resolved_title' error fix?
                         if item['item_id'] not in articles_to_ignore:
+                            # https://stackoverflow.com/questions/44113335/extract-domain-from-url-in-python
+                            from urllib.parse import urlparse
+                            domain =  urlparse(item['resolved_url']).netloc.replace('www.', '')
                             arts.append({
                             'title': item['resolved_title'],
                             'url': item['resolved_url'],
                             'date': item['time_added'],
                             'description': item['excerpt'],
+                            'domain': domain,    
                             }) # 'dupa' +
 
                     except KeyError:
@@ -452,6 +459,9 @@ class Pocket(BasicNewsRecipe):
                     
                 if SORT_WITHIN_TAG_BY_TITLE:
                     arts = sorted(arts, key = lambda i: i['title'])
+
+                if SORT_WITHIN_TAG_BY_DOMAIN:
+                    arts = sorted(arts, key = lambda i: i['domain'])
 
                 if not tagItem:
                     tagItem = "Untagged"
