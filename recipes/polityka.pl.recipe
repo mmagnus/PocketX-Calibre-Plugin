@@ -12,7 +12,7 @@ class polityka(BasicNewsRecipe):
     auto_cleanup   = False
 
     feeds          = [
-        ('polityka.pl', 'http://dl.dropbox.com/s/27t8uhx4nlslggr/feed.xml'),
+        ('polityka.pl', 'http://dl.dropbox.com/s/l38bu97ppbecvki/feed.xml'),
     ]
 
     masthead_url = 'https://dl.dropbox.com/s/iqrap33r3nkxisc/polityka.png?dl=0'
