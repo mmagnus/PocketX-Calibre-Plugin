@@ -41,3 +41,9 @@ if test -f "/Users/magnus/Dropbox/feed.xml"; then
 else
     echo 'polityka: feed does not exists'
 fi
+
+cp -v /Users/magnus/geekbook/notes/snippets.md snippets.txt
+./pocket-send-to-amazon.py snippets.txt
+
+ebook-viewer PocketX.mobi & 
+ebook-viewer polityka.pl.mobi &
